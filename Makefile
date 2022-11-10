@@ -28,6 +28,8 @@ regression:
 clean:
 	$(MAKE) clean -C src
 	$(MAKE) clean -C runtime
+	$(MAKE) clean -C byterun
+	$(MAKE) clean -C interpreter
 	$(MAKE) clean -C stdlib
 	$(MAKE) clean -C regression
 	$(MAKE) clean -C bench
