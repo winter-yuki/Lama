@@ -9,11 +9,11 @@
 
 void analyze(std::string const & filename) {
     bytefile const * bf = read_file(const_cast<char *>(filename.c_str()));
-    const auto instrs = convert(bf);
+    const auto instrs = ins::convert(bf);
     std::map<std::string, size_t> frequencies;
     for (const auto instr : instrs) {
-        const auto code = codesWithParameters.find(instr.index());
-        if (code == codesWithParameters.cend()) continue;
+        const auto code = ins::codesWithParameters.find(instr.index());
+        if (code == ins::codesWithParameters.cend()) continue;
         const auto name = code->second;
         auto search = frequencies.find(name);
         if (search == frequencies.end()) {

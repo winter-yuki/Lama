@@ -8,7 +8,17 @@
 
 #include "../byterun/lib.h"
 
+namespace ins {
+
 using Literal = int;
+
+using Label = size_t;
+
+struct Drop final {};
+
+struct Dup final {};
+
+struct Swap final {};
 
 enum class Operator {
     PLUS,
@@ -38,88 +48,141 @@ struct String final {
     const std::string s;
 };
 
-struct Sexp final {
-    const std::string tag;
-    const size_t n_args;
+/**
+ * @brief Memory locations.
+ */
+namespace loc {
+
+struct Global final {
+    explicit Global(std::string && name) noexcept : name(std::move(name)) {}
+    const std::string name;
 };
 
+struct Local final {
+    explicit Local(size_t index) noexcept : index(index) {}
+    const size_t index;
+};
+
+struct Arg final {
+    explicit Arg(size_t index) noexcept : index(index) {}
+    const size_t index;
+};
+
+struct Const final {
+    explicit Const(Literal value) noexcept : value(value) {}
+    const Literal value;
+};
+
+}  // namespace loc
+
+using Location =
+    std::variant<std::monostate, loc::Global, loc::Local, loc::Arg, loc::Const>;
+
+/**
+ * @brief LoaD value to operand stack from memory location.
+ */
+struct Ld final {
+    const Location loc;
+};
+
+struct Lda final {
+    const Location loc;
+};
+
+struct St final {
+    const Location loc;
+};
+
+/**
+ * @brief STore Indirect.
+ *
+ * Expects: (z:Ref (x):s).
+ * Results: (z:s).
+ * Effects: stores `z` to the `x` in state.
+ */
 struct Sti final {};
 
-struct Sta final {};
+struct CJmp final {
+    const bool onNonZero;
+    const Label label;
+};
 
 struct Jmp final {
-    const size_t label;
+    const Label label;
+};
+
+struct Begin final {
+    const size_t nArgs;
+    const size_t nLocals;
+};
+
+struct CBegin final {
+    const size_t nArgs;
+    const size_t nLocals;
 };
 
 struct End final {};
 
+/**
+ * @brief Return.
+ *
+ * Not supported bytecode.
+ */
 struct Ret final {};
 
-struct Drop final {};
-
-struct Dup final {};
-
-struct Swap final {};
-
-struct Elem final {};
-
-enum class Mem { G, L, A, C };
-
-struct Ld final {
-    const Mem mem;
-    const int n;
-};
-
-struct Lda final {
-    const Mem mem;
-    const int n;
-};
-
-struct St final {
-    const Mem mem;
-    const int n;
-};
-
-struct CJmp final {
-    const bool onNonZero;
-    const size_t label;
-};
-
-struct Begin final {
-    const int n;  // TODO
-    const int m;  // TODO
-};
-
-struct CBegin final {
-    const int n;  // TODO
-    const int m;  // TODO
-};
-
+/**
+ * Not supported bytecode.
+ */
 struct Callc final {
-    const int n;  // TODO
+    const int dummy;
 };
 
 struct Call final {
-    const int n;  // TODO
-    const int m;  // TODO
+    const std::string name;
+    const size_t nArgs;
 };
 
 struct Tag final {
     const std::string tag;
-    const int value;  // TODO
+    const size_t nValues;
 };
 
 struct Array final {
     const size_t size;
 };
 
+/**
+ * @brief STore Array.
+ *
+ * Expects: (v:i:a:s).
+ * Results: (v:s).
+ * Effects: stores `v` to the array `a` by index `i`.
+ */
+struct Sta final {};
+
+/**
+ * @brief Element of array.
+ *
+ * Expects: (i:a:s).
+ * Results: (v:s).
+ */
+struct Elem final {};
+
+struct Sexp final {
+    const std::string tag;
+    const size_t nArgs;
+};
+
+/**
+ * Not supported bytecode.
+ */
 struct Fail final {
-    const int n;  // TODO
-    const int m;  // TODO
+    const int dummy1;
+    const int dummy2;
 };
 
 struct Line final {
-    const int number;
+    const size_t number;
 };
 
 // TODO
@@ -144,10 +207,13 @@ using Instr =
     std::variant<Binop, Const, String, Sexp, Sti, Sta, Jmp, End, Ret, Drop, Dup,
                  Swap, Elem, Ld, Lda, St, CJmp, Begin, CBegin, Callc, Call, Tag,
                  Array, Fail, Line, Patt, RuntimeCall>;
+
 using ByteCode = std::vector<Instr>;
 
 ByteCode convert(bytefile const *);
 
 extern const std::map<size_t, std::string> codesWithParameters;
+
+}  // namespace ins
 
 #endif  // __INSTRUCTIONS_INCLUDE__

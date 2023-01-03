@@ -22,7 +22,7 @@ Config parseCliArgs(int argc, char * argv[]) {
     } else if (argc == 3 && std::string(argv[1]) == "-a") {
         return Config{AnalysisConfig{argv[2]}};
     } else {
-        throw std::runtime_error("Use -a for analysis and provide .bc file");
+        throw std::runtime_error("[-a for analysis] and .bc file");
     }
 }
 
@@ -33,7 +33,7 @@ int main(int argc, char * argv[]) {
     } else if (std::holds_alternative<AnalysisConfig>(config)) {
         analyze(std::get<AnalysisConfig>(config).filename);
     } else {
-        assert(false);
+        assert(false && "Unknown execution mode");
     }
     return EXIT_SUCCESS;
 }

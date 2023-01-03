@@ -6,6 +6,8 @@
 
 #include "../byterun/lib.h"
 
+namespace ins {
+
 const std::map<size_t, std::string> codesWithParameters{{0, "Binop"},
                                                         {1, "Const"},
                                                         {2, "String"},
@@ -39,9 +41,10 @@ ByteCode convert(bytefile const * bf) {
 
 #define INT (ip += sizeof(int), *(int *)(ip - sizeof(int)))
 #define SIZE (size_t(INT))
+#define INDEX (size_t(INT))
 #define LABEL (size_t(INT))
 #define BYTE *ip++
-#define STRING get_string(bf, INT)
+#define STRING std::string(get_string(bf, INT))
 #define FAIL(line) assert(0 && line)
 #define Q(x)              \
     {                     \
@@ -99,30 +102,30 @@ ByteCode convert(bytefile const * bf) {
             case 2:
             case 3:
             case 4: {
-                Mem mem{};
+                Location loc;
                 switch (l) {
                     case 0:
-                        mem = Mem::G;
+                        loc.emplace<loc::Global>(STRING);
                         break;
                     case 1:
-                        mem = Mem::L;
+                        loc.emplace<loc::Local>(INDEX);
                         break;
                     case 2:
-                        mem = Mem::A;
+                        loc.emplace<loc::Arg>(INDEX);
                         break;
                     case 3:
-                        mem = Mem::C;
+                        loc.emplace<loc::Const>(INT);
                         break;
                     default:
                         FAIL(__LINE__);
                 }
                 switch (h) {
                     case 2:
-                        Q((Ld{mem, INT}))
+                        Q((Ld{loc}))
                     case 3:
-                        Q((Lda{mem, INT}))
+                        Q((Lda{loc}))
                     case 4:
-                        Q((St{mem, INT}))
+                        Q((St{loc}))
                     default:
                         FAIL(__LINE__);
                 }
@@ -135,29 +138,29 @@ ByteCode convert(bytefile const * bf) {
                     case 1:
                         Q((CJmp{true, LABEL}))
                     case 2:
-                        Q((Begin{INT, INT}))
+                        Q((Begin{SIZE, SIZE}))
                     case 3:
-                        Q((CBegin{INT, INT}))
+                        Q((CBegin{SIZE, SIZE}))
                     case 4:
-                        FAIL(__LINE__);  // TODO
+                        FAIL(__LINE__);  // TODO closure
                     case 5:
                         Q(Callc{INT})
                     case 6:
-                        Q((Call{INT, INT}))
+                        Q((Call{STRING, SIZE}))
                     case 7:
-                        Q((Tag{STRING, INT}))
+                        Q((Tag{STRING, SIZE}))
                     case 8:
                         Q(Array{SIZE})
                     case 9:
                         Q((Fail{INT, INT}))
                     case 10:
-                        Q(Line{INT})
+                        Q(Line{SIZE})
                     default:
                         FAIL(__LINE__);
                 }
                 break;
             case 6:
-                Q(Patt{})
+                Q(Patt{})  // TODO
             case 7:
                 switch (l) {
                     case 0:
@@ -180,3 +183,5 @@ ByteCode convert(bytefile const * bf) {
     } while (true);
     return res;
 }
+
+}  // namespace ins

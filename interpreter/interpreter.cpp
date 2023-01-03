@@ -10,7 +10,7 @@
 
 void interpret(std::string const & filename) {
     bytefile const * bf = read_file(const_cast<char *>(filename.c_str()));
-    const auto instrs = convert(bf);
+    const auto instrs = ins::convert(bf);
     // TODO prepare memory & gc
     // TODO run loop
 }
