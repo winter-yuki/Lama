@@ -11,13 +11,13 @@ analyze1: driver.o
 driver.o: interpreter.o analyzer.o driver.cpp
 	g++ -m32 driver.cpp interpreter.o analyzer.o instructions.o ../runtime/runtime.a ../runtime/gc_runtime.o ../runtime/runtime.o ../byterun/lib.o -o driver
 
-interpreter.o: byterun gc_runtime instructions.o interpreter.cpp interpreter.hpp
+interpreter.o: byterun gc_runtime instructions.o utils.hpp interpreter.cpp interpreter.hpp
 	g++ -m32 -c interpreter.cpp
 
 analyzer.o: byterun instructions.o analyzer.hpp analyzer.cpp
 	g++ -m32 -c analyzer.cpp
 
-instructions.o: byterun instructions.cpp instructions.hpp
+instructions.o: byterun utils.hpp instructions.cpp instructions.hpp
 	g++ -m32 -c instructions.cpp
 
 byterun: gc_runtime

@@ -8,33 +8,39 @@
 
 namespace ins {
 
-const std::map<size_t, std::string> codesWithParameters{{0, "Binop"},
-                                                        {1, "Const"},
-                                                        {2, "String"},
-                                                        {3, "Sexp"},
-                                                        //   {4, "Sti"},
-                                                        //   {5, "Sta"},
-                                                        {6, "Jmp"},
-                                                        //   {7, "End"},
-                                                        //   {8, "Ret"},
-                                                        //   {9, "Drop"},
-                                                        //   {10, "Dup"},
-                                                        //   {11, "Swap"},
-                                                        //   {12, "Elem"},
-                                                        {13, "Ld"},
-                                                        {14, "Lda"},
-                                                        {15, "St"},
-                                                        {16, "CJmp"},
-                                                        {17, "Begin"},
-                                                        {18, "CBegin"},
-                                                        {19, "Callc"},
-                                                        {20, "Call"},
-                                                        {21, "Tag"},
-                                                        {22, "Array"},
-                                                        {23, "Fail"},
-                                                        {24, "Line"},
-                                                        //   {25, "Patt"},
-                                                        {26, "RuntimeCall"}};
+#define INFO(type, name, hasParams)               \
+    {                                             \
+        id<type>(), InstrInfo { name, hasParams } \
+    }
+
+const std::map<size_t, InstrInfo> instrsInfo{
+    INFO(Drop, "Drop", false),
+    INFO(Dup, "Dup", false),
+    INFO(Swap, "Swap", false),
+    INFO(Binop, "Binop", false),
+    INFO(Const, "Const", true),
+    INFO(String, "String", true),
+    INFO(Ld, "Ld", true),
+    INFO(Lda, "Lda", true),
+    INFO(St, "St", true),
+    INFO(Sti, "Sti", false),
+    INFO(CJmp, "CJmp", true),
+    INFO(Jmp, "Jmp", true),
+    INFO(Begin, "Begin", true),
+    INFO(CBegin, "CBegin", true),
+    INFO(End, "End", false),
+    INFO(Ret, "Ret", false),
+    INFO(Callc, "Callc", true),
+    INFO(Call, "Call", true),
+    INFO(Tag, "Tag", true),
+    INFO(Array, "Array", true),
+    INFO(Sta, "Sta", false),
+    INFO(Elem, "Elem", false),
+    INFO(Sexp, "Sexp", true),
+    INFO(Fail, "Fail", true),
+    INFO(Line, "Line", true),
+    INFO(Patt, "Patt", true),
+    INFO(RuntimeCall, "RuntimeCall", true)};
 
 ByteCode convert(bytefile const * bf) {
     std::vector<Instr> res;

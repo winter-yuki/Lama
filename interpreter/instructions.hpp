@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../byterun/lib.h"
+#include "utils.hpp"
 
 namespace ins {
 
@@ -116,6 +117,9 @@ struct Begin final {
     const size_t nLocals;
 };
 
+/**
+ * Not supported bytecode.
+ */
 struct CBegin final {
     const size_t nArgs;
     const size_t nLocals;
@@ -208,11 +212,21 @@ using Instr =
                  Swap, Elem, Ld, Lda, St, CJmp, Begin, CBegin, Callc, Call, Tag,
                  Array, Fail, Line, Patt, RuntimeCall>;
 
+template <class Code>
+constexpr size_t id() {
+    return variant_index<Instr, Code>();
+}
+
 using ByteCode = std::vector<Instr>;
 
 ByteCode convert(bytefile const *);
 
-extern const std::map<size_t, std::string> codesWithParameters;
+struct InstrInfo final {
+    const std::string name;
+    const bool hasParams;
+};
+
+extern const std::map<size_t, InstrInfo> instrsInfo;
 
 }  // namespace ins
 
