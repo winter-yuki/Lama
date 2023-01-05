@@ -7,13 +7,10 @@
 #include <vector>
 
 #include "../byterun/lib.h"
+#include "defs.hpp"
 #include "utils.hpp"
 
 namespace ins {
-
-using Literal = int;
-
-using Label = size_t;
 
 struct Drop final {};
 
@@ -55,8 +52,8 @@ struct String final {
 namespace loc {
 
 struct Global final {
-    explicit Global(std::string && name) noexcept : name(std::move(name)) {}
-    const std::string name;
+    explicit Global(size_t index) noexcept : index(index) {}
+    const size_t index;
 };
 
 struct Local final {
@@ -74,10 +71,17 @@ struct Const final {
     const Literal value;
 };
 
-}  // namespace loc
-
 using Location =
     std::variant<std::monostate, loc::Global, loc::Local, loc::Arg, loc::Const>;
+
+template <class Loc>
+constexpr size_t id() {
+    return variantId<Location, Loc>();
+}
+
+}  // namespace loc
+
+using loc::Location;
 
 /**
  * @brief LoaD value to operand stack from memory location.
@@ -103,13 +107,25 @@ struct St final {
  */
 struct Sti final {};
 
-struct CJmp final {
+struct RawCJmp final {
     const bool onNonZero;
     const Label label;
 };
 
-struct Jmp final {
+struct CJmp final {
+    explicit CJmp(bool onNonZero, Ip ip) noexcept
+        : onNonZero(onNonZero), ip(ip) {}
+    const bool onNonZero;
+    const Ip ip;
+};
+
+struct RawJmp final {
     const Label label;
+};
+
+struct Jmp final {
+    explicit Jmp(Ip ip) noexcept : ip(ip) {}
+    const Ip ip;
 };
 
 struct Begin final {
@@ -141,8 +157,14 @@ struct Callc final {
     const int dummy;
 };
 
+struct RawCall final {
+    const Label label;
+    const size_t nArgs;
+};
+
 struct Call final {
-    const std::string name;
+    explicit Call(Ip ip, size_t nArgs) noexcept : ip(ip), nArgs(nArgs) {}
+    const Ip ip;
     const size_t nArgs;
 };
 
@@ -192,6 +214,8 @@ struct Line final {
 // TODO
 struct Patt final {};
 
+namespace rt {
+
 struct CallRead final {};
 
 struct CallWrite final {};
@@ -207,14 +231,23 @@ struct CallArray final {
 using RuntimeCall =
     std::variant<CallRead, CallWrite, CallLength, CallString, CallArray>;
 
-using Instr =
-    std::variant<Binop, Const, String, Sexp, Sti, Sta, Jmp, End, Ret, Drop, Dup,
-                 Swap, Elem, Ld, Lda, St, CJmp, Begin, CBegin, Callc, Call, Tag,
-                 Array, Fail, Line, Patt, RuntimeCall>;
+template <class Op>
+constexpr size_t id() {
+    return variantId<RuntimeCall, Op>();
+}
+
+}  // namespace rt
+
+using rt::RuntimeCall;
+
+using Instr = std::variant<Binop, Const, String, Sexp, Sti, Sta, RawJmp, Jmp,
+                           End, Ret, Drop, Dup, Swap, Elem, Ld, Lda, St,
+                           RawCJmp, CJmp, Begin, CBegin, Callc, RawCall, Call,
+                           Tag, Array, Fail, Line, Patt, RuntimeCall>;
 
 template <class Code>
 constexpr size_t id() {
-    return variant_index<Instr, Code>();
+    return variantId<Instr, Code>();
 }
 
 using ByteCode = std::vector<Instr>;

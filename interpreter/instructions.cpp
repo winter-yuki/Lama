@@ -1,8 +1,10 @@
 #include "instructions.hpp"
 
 #include <cassert>
+#include <iostream>  // TODO
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "../byterun/lib.h"
 
@@ -14,36 +16,26 @@ namespace ins {
     }
 
 const std::map<size_t, InstrInfo> instrsInfo{
-    INFO(Drop, "Drop", false),
-    INFO(Dup, "Dup", false),
-    INFO(Swap, "Swap", false),
-    INFO(Binop, "Binop", false),
-    INFO(Const, "Const", true),
-    INFO(String, "String", true),
-    INFO(Ld, "Ld", true),
-    INFO(Lda, "Lda", true),
-    INFO(St, "St", true),
-    INFO(Sti, "Sti", false),
-    INFO(CJmp, "CJmp", true),
-    INFO(Jmp, "Jmp", true),
-    INFO(Begin, "Begin", true),
-    INFO(CBegin, "CBegin", true),
-    INFO(End, "End", false),
-    INFO(Ret, "Ret", false),
-    INFO(Callc, "Callc", true),
-    INFO(Call, "Call", true),
-    INFO(Tag, "Tag", true),
-    INFO(Array, "Array", true),
-    INFO(Sta, "Sta", false),
-    INFO(Elem, "Elem", false),
-    INFO(Sexp, "Sexp", true),
-    INFO(Fail, "Fail", true),
-    INFO(Line, "Line", true),
-    INFO(Patt, "Patt", true),
-    INFO(RuntimeCall, "RuntimeCall", true)};
+    INFO(Drop, "Drop", false),      INFO(Dup, "Dup", false),
+    INFO(Swap, "Swap", false),      INFO(Binop, "Binop", false),
+    INFO(Const, "Const", true),     INFO(String, "String", true),
+    INFO(Ld, "Ld", true),           INFO(Lda, "Lda", true),
+    INFO(St, "St", true),           INFO(Sti, "Sti", false),
+    INFO(RawCJmp, "RawCJmp", true), INFO(CJmp, "CJmp", true),
+    INFO(RawJmp, "RawJmp", true),   INFO(Jmp, "Jmp", true),
+    INFO(Begin, "Begin", true),     INFO(CBegin, "CBegin", true),
+    INFO(End, "End", false),        INFO(Ret, "Ret", false),
+    INFO(Callc, "Callc", true),     INFO(RawCall, "RawCall", true),
+    INFO(Call, "Call", true),       INFO(Tag, "Tag", true),
+    INFO(Array, "Array", true),     INFO(Sta, "Sta", false),
+    INFO(Elem, "Elem", false),      INFO(Sexp, "Sexp", true),
+    INFO(Fail, "Fail", true),       INFO(Line, "Line", true),
+    INFO(Patt, "Patt", true),       INFO(RuntimeCall, "RuntimeCall", true)};
 
 ByteCode convert(bytefile const * bf) {
     std::vector<Instr> res;
+    std::unordered_map<Label, Ip> labelTranslationTable;
+    char * ip = bf->code_ptr;
 
 #define INT (ip += sizeof(int), *(int *)(ip - sizeof(int)))
 #define SIZE (size_t(INT))
@@ -52,13 +44,14 @@ ByteCode convert(bytefile const * bf) {
 #define BYTE *ip++
 #define STRING std::string(get_string(bf, INT))
 #define FAIL(line) assert(0 && line)
-#define Q(x)              \
-    {                     \
-        res.push_back(x); \
-        break;            \
+#define Q(x)                                             \
+    {                                                    \
+        labelTranslationTable.insert(                    \
+            {Label(ip - bf->code_ptr - 1), res.size()}); \
+        res.push_back(x);                                \
+        break;                                           \
     }
 
-    char * ip = bf->code_ptr;
     Operator ops[] = {Operator::PLUS, Operator::MINUS, Operator::MULT,
                       Operator::DIV,  Operator::MOD,   Operator::LT,
                       Operator::LE,   Operator::GT,    Operator::GE,
@@ -111,7 +104,7 @@ ByteCode convert(bytefile const * bf) {
                 Location loc;
                 switch (l) {
                     case 0:
-                        loc.emplace<loc::Global>(STRING);
+                        loc.emplace<loc::Global>(INDEX);
                         break;
                     case 1:
                         loc.emplace<loc::Local>(INDEX);
@@ -140,19 +133,19 @@ ByteCode convert(bytefile const * bf) {
             case 5:
                 switch (l) {
                     case 0:
-                        Q((CJmp{false, LABEL}))
+                        Q((RawCJmp{false, LABEL}))
                     case 1:
-                        Q((CJmp{true, LABEL}))
+                        Q((RawCJmp{true, LABEL}))
                     case 2:
                         Q((Begin{SIZE, SIZE}))
                     case 3:
                         Q((CBegin{SIZE, SIZE}))
                     case 4:
-                        FAIL(__LINE__);  // TODO closure
+                        FAIL(__LINE__);  // closure
                     case 5:
                         Q(Callc{INT})
                     case 6:
-                        Q((Call{STRING, SIZE}))
+                        Q((RawCall{LABEL, SIZE}))
                     case 7:
                         Q((Tag{STRING, SIZE}))
                     case 8:
@@ -170,15 +163,15 @@ ByteCode convert(bytefile const * bf) {
             case 7:
                 switch (l) {
                     case 0:
-                        Q(RuntimeCall{CallRead{}})
+                        Q(RuntimeCall{rt::CallRead{}})
                     case 1:
-                        Q(RuntimeCall{CallWrite{}})
+                        Q(RuntimeCall{rt::CallWrite{}})
                     case 2:
-                        Q(RuntimeCall(CallLength{}))
+                        Q(RuntimeCall(rt::CallLength{}))
                     case 3:
-                        Q(RuntimeCall{CallString{}})
+                        Q(RuntimeCall{rt::CallString{}})
                     case 4:
-                        Q(RuntimeCall{CallArray{SIZE}})
+                        Q(RuntimeCall{rt::CallArray{SIZE}})
                     default:
                         FAIL(__LINE__);
                 }
@@ -187,6 +180,39 @@ ByteCode convert(bytefile const * bf) {
                 FAIL(__LINE__);
         }
     } while (true);
+
+    // Translate labels to ips
+    for (auto & instr : res) {
+        switch (instr.index()) {
+            case ins::id<ins::RawCJmp>(): {
+                const auto op = std::get<ins::RawCJmp>(instr);
+                const auto search = labelTranslationTable.find(op.label);
+                assert(search != labelTranslationTable.end());
+                instr.emplace<ins::CJmp>(op.onNonZero, search->second);
+                break;
+            }
+
+            case ins::id<ins::RawJmp>(): {
+                const auto op = std::get<ins::RawJmp>(instr);
+                const auto search = labelTranslationTable.find(op.label);
+                assert(search != labelTranslationTable.end());
+                instr.emplace<ins::Jmp>(search->second);
+                break;
+            }
+
+            case ins::id<ins::RawCall>(): {
+                const auto op = std::get<ins::RawCall>(instr);
+                const auto search = labelTranslationTable.find(op.label);
+                assert(search != labelTranslationTable.end());
+                instr.emplace<ins::Call>(search->second, op.nArgs);
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+
     return res;
 }
 
