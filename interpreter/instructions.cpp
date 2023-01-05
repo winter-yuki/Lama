@@ -1,12 +1,13 @@
 #include "instructions.hpp"
 
 #include <cassert>
-#include <iostream>  // TODO
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 #include "../byterun/lib.h"
+#include "../runtime/runtime.h"
 
 namespace ins {
 
@@ -60,18 +61,20 @@ ByteCode convert(bytefile const * bf) {
     std::string pats[] = {"=str", "#string", "#array", "#sexp",
                           "#ref", "#val",    "#fun"};
 
+    bool stop = false;
     do {
         char x = BYTE, h = (x & 0xF0) >> 4, l = x & 0x0F;
         switch (h) {
             case 15: {
-                return res;
+                stop = true;
+                break;
             }
             case 0:
                 Q(Binop{ops[l - 1]})
             case 1:
                 switch (l) {
                     case 0:
-                        Q(Const{INT})
+                        Q(Const{BOX(INT)})
                     case 1:
                         Q(String{STRING})
                     case 2:
@@ -179,7 +182,7 @@ ByteCode convert(bytefile const * bf) {
             default:
                 FAIL(__LINE__);
         }
-    } while (true);
+    } while (!stop);
 
     // Translate labels to ips
     for (auto & instr : res) {

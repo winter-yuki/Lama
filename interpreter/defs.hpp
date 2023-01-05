@@ -19,4 +19,9 @@ using Ip = size_t;
 
 using Ref = void *;
 
+/**
+ * @brief INTerpreter DeBuG.
+ */
+#define INTDBG
+
 #endif  // __DEFS_INCLUDE__

@@ -2,16 +2,28 @@ all: driver.o
 
 analyze: driver.o
 	lamac -b ../performance/Sort.lama
-	./driver -a ../performance/Sort.bc
+	./driver -a Sort.bc
 
-analyze1: driver.o
-	lamac -b ../regression/test002.lama
-	./driver -a ../regression/test002.bc
+analyze24: driver.o
+	lamac -b ../regression/test024.lama
+	./driver -a test024.bc
 
-driver.o: interpreter.o analyzer.o driver.cpp
-	g++ -m32 driver.cpp interpreter.o analyzer.o instructions.o ../runtime/runtime.a ../runtime/gc_runtime.o ../runtime/runtime.o ../byterun/lib.o -o driver
+run1: driver.o byterun
+	cat ../regression/test001.lama
+	lamac -b ../regression/test001.lama
+	../byterun/-byterun test001.bc
+	./driver test001.bc
 
-interpreter.o: byterun gc_runtime instructions.o utils.hpp interpreter.cpp interpreter.hpp
+run24: driver.o byterun
+	cat ../regression/test024.lama
+	lamac -b ../regression/test024.lama
+	../byterun/-byterun test024.bc
+	./driver test024.bc
+
+driver.o: interpreter.o analyzer.o driver.cpp runtime
+	g++ -m32 driver.cpp interpreter.o analyzer.o instructions.o ../runtime/runtime.a ../byterun/lib.o -o driver
+
+interpreter.o: byterun runtime instructions.o utils.hpp interpreter.cpp interpreter.hpp
 	g++ -m32 -c interpreter.cpp
 
 analyzer.o: byterun instructions.o analyzer.hpp analyzer.cpp
@@ -20,10 +32,10 @@ analyzer.o: byterun instructions.o analyzer.hpp analyzer.cpp
 instructions.o: byterun utils.hpp instructions.cpp instructions.hpp
 	g++ -m32 -c instructions.cpp
 
-byterun: gc_runtime
+byterun: runtime
 	$(MAKE) -C ../byterun
 
-gc_runtime:
+runtime:
 	$(MAKE) -C ../runtime
 
 clean:
