@@ -20,6 +20,12 @@ run24: driver.o byterun
 	../byterun/-byterun test024.bc
 	./driver test024.bc
 
+runSort: driver.o byterun
+	cat ../performance/Sort.lama
+	# lamac -b ../performance/Sort.lama - does not work, use precompiled Sort.bc file
+	../byterun/-byterun Sort.bc
+	./driver Sort.bc
+
 driver.o: interpreter.o analyzer.o driver.cpp runtime
 	g++ -m32 driver.cpp interpreter.o analyzer.o instructions.o ../runtime/runtime.a ../byterun/lib.o -o driver
 

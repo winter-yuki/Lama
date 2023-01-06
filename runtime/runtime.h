@@ -30,6 +30,19 @@ void failure (char *s, ...);
 int Lread ();
 int Lwrite (int n);
 
+void* Bsta (void *v, int i, void *x);
+int Llength (void *p);
+
+void* LmakeArray (int length);
+void* Belem (void *p, int i);
+
+void* Bstring (void *p);
+
+void* Bsexp (int bn, ...);
+void* Bsexp1 (int tag, int bn);
+int Btag (void *d, int t, int n);
+int LtagHash (char*);
+
 # ifdef __cplusplus
 }
 # endif // __cplusplus

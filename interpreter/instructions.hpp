@@ -43,7 +43,7 @@ struct Const final {
 };
 
 struct String final {
-    const std::string s;
+    const char * s;
 };
 
 /**
@@ -169,11 +169,12 @@ struct Call final {
 };
 
 struct Tag final {
-    const std::string tag;
+    const char * tag;
     const size_t nValues;
 };
 
 struct Array final {
+    explicit Array(size_t size) noexcept : size(size) {}
     const size_t size;
 };
 
@@ -195,7 +196,7 @@ struct Sta final {};
 struct Elem final {};
 
 struct Sexp final {
-    const std::string tag;
+    const char * tag;
     const size_t nArgs;
 };
 

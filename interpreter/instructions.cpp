@@ -43,7 +43,7 @@ ByteCode convert(bytefile const * bf) {
 #define INDEX (size_t(INT))
 #define LABEL (size_t(INT))
 #define BYTE *ip++
-#define STRING std::string(get_string(bf, INT))
+#define STRING get_string(bf, INT)
 #define FAIL(line) assert(0 && line)
 #define Q(x)                                             \
     {                                                    \
@@ -184,7 +184,6 @@ ByteCode convert(bytefile const * bf) {
         }
     } while (!stop);
 
-    // Translate labels to ips
     for (auto & instr : res) {
         switch (instr.index()) {
             case ins::id<ins::RawCJmp>(): {
@@ -208,6 +207,15 @@ ByteCode convert(bytefile const * bf) {
                 const auto search = labelTranslationTable.find(op.label);
                 assert(search != labelTranslationTable.end());
                 instr.emplace<ins::Call>(search->second, op.nArgs);
+                break;
+            }
+
+            case ins::id<ins::RuntimeCall>(): {
+                const auto & op = std::get<ins::RuntimeCall>(instr);
+                if (std::holds_alternative<rt::CallArray>(op)) {
+                    const auto & call = std::get<rt::CallArray>(op);
+                    instr.emplace<ins::Array>(call.size);
+                }
                 break;
             }
 

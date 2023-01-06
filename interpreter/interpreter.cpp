@@ -212,7 +212,8 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::String>(): {
                 const auto op = std::get<ins::String>(instr);
-                // TODO
+                const auto res = Bstring((void *)op.s);
+                stack.push(res);
                 break;
             }
 
@@ -292,26 +293,48 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Tag>(): {
                 const auto op = std::get<ins::Tag>(instr);
+                const auto hash = LtagHash((char *)op.tag);
+                const auto res = Btag(stack.popRef(), hash, op.nValues);
+                stack.push(res);
                 break;
             }
 
             case ins::id<ins::Array>(): {
                 const auto op = std::get<ins::Array>(instr);
+                const auto arr = LmakeArray(op.size);
+                for (size_t i = 0; i < op.size; ++i) {
+                    *(Word *)Belem(arr, op.size - i - 1) = stack.pop();
+                }
+                stack.push(arr);
                 break;
             }
 
             case ins::id<ins::Sta>(): {
                 const auto op = std::get<ins::Sta>(instr);
+                const auto value = stack.popRef();
+                const auto index = stack.pop();
+                const auto arr = stack.popRef();
+                const auto res = Bsta(value, index, arr);
+                stack.push(res);
                 break;
             }
 
             case ins::id<ins::Elem>(): {
                 const auto op = std::get<ins::Elem>(instr);
+                const auto index = stack.pop();
+                const auto arr = stack.popRef();
+                stack.push(*(Literal *)Belem(arr, index));
                 break;
             }
 
             case ins::id<ins::Sexp>(): {
                 const auto op = std::get<ins::Sexp>(instr);
+                const auto hash = LtagHash((char *)op.tag);
+                const auto sexp = Bsexp1(hash, op.nArgs);
+                for (size_t i = 0; i < op.nArgs; ++i) {
+                    *(Word *)Belem(sexp, i) = stack.pop();
+                }
+                stack.push(sexp);
                 break;
             }
 
@@ -321,6 +344,7 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Patt>(): {
                 const auto op = std::get<ins::Patt>(instr);
+                // TODO
                 break;
             }
 
@@ -338,7 +362,15 @@ void interpret(std::string const & filename) {
                         break;
                     }
 
+                    case ins::rt::id<ins::rt::CallLength>(): {
+                        const auto res = Llength(stack.popRef());
+                        stack.push(res);
+                        break;
+                    }
+
                     default:
+                        std::cout << "Unknown runtime function: " << op.index()
+                                  << std::endl;
                         assert(false && "Unknown runtime call");
                 }
                 break;
