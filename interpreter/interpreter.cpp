@@ -20,29 +20,70 @@ namespace {
 
 class OperandsStack final {
    public:
-    void push(Literal value) { stack.at(sp++) = Word(value); }
+    explicit OperandsStack() {
+        // Prevent reallocation
+        stack.reserve(10000);
+    }
 
-    void push(Ref ref) { stack.at(sp++) = Word(ref); }
+    void push(Literal value) { stack.push_back(Word(value)); }
 
-    void push(Word value) { stack.at(sp++) = Word(value); }
+    void push(Ref ref) { stack.push_back(Word(ref)); }
 
-    Literal topLiteral() const { return Literal(stack.at(sp - 1)); }
+    void push(Word value) { stack.push_back(Word(value)); }
 
-    Ref topRef() const { return Ref(stack.at(sp - 1)); }
+    Literal topLiteral() const {
+        assert(!stack.empty());
+        return Literal(stack.back());
+    }
 
-    Word top() const { return Word(stack.at(sp - 1)); }
+    Ref topRef() const {
+        assert(!stack.empty());
+        return Ref(stack.back());
+    }
 
-    Literal popLiteral() { return Literal(stack.at(--sp)); }
+    Word top() const {
+        assert(!stack.empty());
+        return Word(stack.back());
+    }
 
-    Ref popRef() { return Ref(stack.at(--sp)); }
+    Literal popLiteral() {
+        assert(!stack.empty());
+        const auto top = topLiteral();
+        stack.pop_back();
+        return top;
+    }
 
-    Word pop() { return Word(stack.at(--sp)); }
+    Ref popRef() {
+        assert(!stack.empty());
+        const auto top = topRef();
+        stack.pop_back();
+        return top;
+    }
 
-    size_t size() const { return sp; }
+    Word pop() {
+        assert(!stack.empty());
+        const auto top_ = top();
+        stack.pop_back();
+        return top_;
+    }
+
+    size_t size() const { return stack.size(); }
+
+    void print() {
+        for (auto x : stack) {
+            if (UNBOXED(x)) {
+                std::cout << UNBOX(x);
+            } else {
+                std::cout << "(" << LkindOf((void *)x) << ")";
+                // printValue((void *)x);
+            }
+            std::cout << " ";
+        }
+        std::cout << std::endl;
+    }
 
    private:
-    size_t sp = 0;  // stack pointer
-    std::vector<Word> stack = std::vector<Word>(10000);
+    std::vector<Word> stack;
 };
 
 class Frame final {
@@ -66,24 +107,23 @@ void interpret(std::string const & filename) {
     OperandsStack stack;
     std::vector<Ip> retIps;
     std::vector<Frame> frames;
-    frames.reserve(10000);
     std::vector<Word> globals(bf->global_area_size);
 
-    auto memRef = [&](ins::Location loc) -> Word & {
+    auto memRef = [&](ins::Location loc) -> Word * {
         switch (loc.index()) {
             case ins::loc::id<ins::loc::Global>(): {
                 const auto global = std::get<ins::loc::Global>(loc);
-                return globals.at(global.index);
+                return &globals.at(global.index);
             }
 
             case ins::loc::id<ins::loc::Local>(): {
                 const auto local = std::get<ins::loc::Local>(loc);
-                return frames.back().local(local.index);
+                return &frames.back().local(local.index);
             }
 
             case ins::loc::id<ins::loc::Arg>(): {
                 const auto arg = std::get<ins::loc::Arg>(loc);
-                return frames.back().arg(arg.index);
+                return &frames.back().arg(arg.index);
             }
 
             case ins::loc::id<ins::loc::Const>(): {
@@ -103,7 +143,7 @@ void interpret(std::string const & filename) {
             }
 
             default:
-                return memRef(loc);
+                return *memRef(loc);
         }
     };
 
@@ -111,9 +151,11 @@ void interpret(std::string const & filename) {
     while (ip < instrs.size()) {
         const auto & instr = instrs.at(ip++);
 #ifdef INTDBG
-        std::cout << "Evaluating: "
+        std::cout << " " << (ip - 1) << " : "
                   << ins::instrsInfo.find(instr.index())->second.name
-                  << "\ton op stack size = " << stack.size() << std::endl;
+                  << std::endl;
+        std::cout << "\t";
+        stack.print();
 #endif  // INTDBG
         switch (instr.index()) {
             case ins::id<ins::Drop>(): {
@@ -225,13 +267,13 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Lda>(): {
                 const auto op = std::get<ins::Lda>(instr);
-                stack.push(&memRef(op.loc));
+                stack.push(memRef(op.loc));
                 break;
             }
 
             case ins::id<ins::St>(): {
                 const auto op = std::get<ins::St>(instr);
-                memRef(op.loc) = stack.top();
+                *memRef(op.loc) = stack.top();
                 break;
             }
 
@@ -246,7 +288,11 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::CJmp>(): {
                 const auto op = std::get<ins::CJmp>(instr);
-                const auto top = stack.pop();
+                const auto top = UNBOX(stack.pop());
+#ifdef INTDBG
+                std::cout << "\tCJMP" << (op.onNonZero ? "nz" : "z") << ": "
+                          << op.ip << "; top = " << top << std::endl;
+#endif  // INTDBG
                 if (op.onNonZero && top != 0 || !op.onNonZero && top == 0) {
                     ip = op.ip;
                 }
@@ -255,6 +301,10 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Jmp>(): {
                 const auto op = std::get<ins::Jmp>(instr);
+#ifdef INTDBG
+                std::cout << "\tJMP"
+                          << ": " << op.ip << std::endl;
+#endif  // INTDBG
                 ip = op.ip;
                 break;
             }
@@ -301,9 +351,9 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Array>(): {
                 const auto op = std::get<ins::Array>(instr);
-                const auto arr = LmakeArray(op.size);
+                const auto arr = LmakeArray(BOX(op.size));
                 for (size_t i = 0; i < op.size; ++i) {
-                    *(Word *)Belem(arr, op.size - i - 1) = stack.pop();
+                    Bsta(stack.popRef(), i, arr);
                 }
                 stack.push(arr);
                 break;
@@ -314,7 +364,7 @@ void interpret(std::string const & filename) {
                 const auto value = stack.popRef();
                 const auto index = stack.pop();
                 const auto arr = stack.popRef();
-                const auto res = Bsta(value, index, arr);
+                const auto res = Bsta(value, UNBOX(index), arr);
                 stack.push(res);
                 break;
             }
@@ -323,7 +373,8 @@ void interpret(std::string const & filename) {
                 const auto op = std::get<ins::Elem>(instr);
                 const auto index = stack.pop();
                 const auto arr = stack.popRef();
-                stack.push(*(Literal *)Belem(arr, index));
+                const auto res = Literal(Belem(arr, index));
+                stack.push(res);
                 break;
             }
 
@@ -332,7 +383,7 @@ void interpret(std::string const & filename) {
                 const auto hash = LtagHash((char *)op.tag);
                 const auto sexp = Bsexp1(hash, op.nArgs);
                 for (size_t i = 0; i < op.nArgs; ++i) {
-                    *(Word *)Belem(sexp, i) = stack.pop();
+                    Bsta(stack.popRef(), op.nArgs - i - 1, sexp);
                 }
                 stack.push(sexp);
                 break;
@@ -341,12 +392,6 @@ void interpret(std::string const & filename) {
             case ins::id<ins::Line>():
                 // Do nothing
                 break;
-
-            case ins::id<ins::Patt>(): {
-                const auto op = std::get<ins::Patt>(instr);
-                // TODO
-                break;
-            }
 
             case ins::id<ins::RuntimeCall>(): {
                 const auto op = std::get<ins::RuntimeCall>(instr);
@@ -357,8 +402,7 @@ void interpret(std::string const & filename) {
                     }
 
                     case ins::rt::id<ins::rt::CallWrite>(): {
-                        const auto res = Lwrite(stack.popLiteral());
-                        stack.push(res);
+                        Lwrite(stack.popLiteral());
                         break;
                     }
 

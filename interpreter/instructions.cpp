@@ -45,12 +45,16 @@ ByteCode convert(bytefile const * bf) {
 #define BYTE *ip++
 #define STRING get_string(bf, INT)
 #define FAIL(line) assert(0 && line)
-#define Q(x)                                             \
-    {                                                    \
-        labelTranslationTable.insert(                    \
-            {Label(ip - bf->code_ptr - 1), res.size()}); \
-        res.push_back(x);                                \
-        break;                                           \
+#define UPDATE_TABLE                                       \
+    {                                                      \
+        const auto label = Label(ip - bf->code_ptr - 1);   \
+        labelTranslationTable.insert({label, res.size()}); \
+    }
+#define Q(x)              \
+    {                     \
+        UPDATE_TABLE      \
+        res.push_back(x); \
+        break;            \
     }
 
     Operator ops[] = {Operator::PLUS, Operator::MINUS, Operator::MULT,
@@ -84,7 +88,7 @@ ByteCode convert(bytefile const * bf) {
                     case 4:
                         Q(Sta{})
                     case 5:
-                        Q(Jmp{LABEL})
+                        Q(RawJmp{LABEL})
                     case 6:
                         Q(End{})
                     case 7:
@@ -104,6 +108,7 @@ ByteCode convert(bytefile const * bf) {
             case 2:
             case 3:
             case 4: {
+                UPDATE_TABLE;
                 Location loc;
                 switch (l) {
                     case 0:
@@ -189,7 +194,8 @@ ByteCode convert(bytefile const * bf) {
             case ins::id<ins::RawCJmp>(): {
                 const auto op = std::get<ins::RawCJmp>(instr);
                 const auto search = labelTranslationTable.find(op.label);
-                assert(search != labelTranslationTable.end());
+                assert(search != labelTranslationTable.end() &&
+                       "No ip for RawCJmp");
                 instr.emplace<ins::CJmp>(op.onNonZero, search->second);
                 break;
             }
@@ -197,7 +203,8 @@ ByteCode convert(bytefile const * bf) {
             case ins::id<ins::RawJmp>(): {
                 const auto op = std::get<ins::RawJmp>(instr);
                 const auto search = labelTranslationTable.find(op.label);
-                assert(search != labelTranslationTable.end());
+                assert(search != labelTranslationTable.end() &&
+                       "No ip for RawJmp");
                 instr.emplace<ins::Jmp>(search->second);
                 break;
             }
@@ -205,7 +212,8 @@ ByteCode convert(bytefile const * bf) {
             case ins::id<ins::RawCall>(): {
                 const auto op = std::get<ins::RawCall>(instr);
                 const auto search = labelTranslationTable.find(op.label);
-                assert(search != labelTranslationTable.end());
+                assert(search != labelTranslationTable.end() &&
+                       "No ip for RawCall");
                 instr.emplace<ins::Call>(search->second, op.nArgs);
                 break;
             }

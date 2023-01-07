@@ -212,7 +212,9 @@ struct Line final {
     const size_t number;
 };
 
-// TODO
+/**
+ * Not supported bytecode.
+ */
 struct Patt final {};
 
 namespace rt {

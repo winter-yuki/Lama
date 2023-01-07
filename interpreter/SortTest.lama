@@ -1,0 +1,56 @@
+-- fun compare (x, y) {
+--   x - y
+-- }
+
+-- fun bubbleSort (l) {
+--   fun inner (l) {
+--     case l of
+--       x : z@(y : tl) ->
+--        if compare (x, y) > 0
+--        then [true, y : inner (x : tl) [1]]
+--        else case inner (z) of [f, z] -> [f, x : z] esac
+--        fi
+--     | _ -> [false, l]
+--     esac
+--   }
+
+--   fun rec (l) {
+--     case inner (l) of
+--       [true , l] -> rec (l)
+--     | [false, l] -> l
+--     esac
+--   }
+
+--   rec (l)
+-- }
+
+-- fun generate (n) {
+--   if n then n : generate (n-1) else {} fi
+-- }
+
+-- var lst = 5 : 4 : 1 : 100 : 7 : {};
+-- var sorted = bubbleSort (lst);
+
+-- write("original list:");
+-- write(lst);
+-- write("sorted:");
+-- write(sorted)
+
+-- var x = 0;
+-- if x then write (x) else write (x + 1) fi
+
+var xs = 1 : 2 : 3 : {};
+-- fun print (xs) {
+--   case xs of
+--     x : xs -> write (x); print (xs)
+--   | {} -> write ("nil")
+--   esac
+-- }
+
+-- print (xs)
+
+case xs of
+  {} -> write (0)
+| x:xs -> write (x)
+| _ -> write (100500)
+esac

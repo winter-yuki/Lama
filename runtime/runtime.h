@@ -26,9 +26,12 @@ extern "C"
 # define WORD_SIZE (CHAR_BIT * sizeof(int))
 
 void failure (char *s, ...);
+void printValue (void *p);
 
 int Lread ();
 int Lwrite (int n);
+
+int LkindOf (void *p);
 
 void* Bsta (void *v, int i, void *x);
 int Llength (void *p);
@@ -50,5 +53,11 @@ int LtagHash (char*);
 # define UNBOXED(x)  (((int) (x)) &  0x0001)
 # define UNBOX(x)    (((int) (x)) >> 1)
 # define BOX(x)      ((((int) (x)) << 1) | 0x0001)
+
+# define STRING_TAG  0x00000001
+# define ARRAY_TAG   0x00000003
+# define SEXP_TAG    0x00000005
+# define CLOSURE_TAG 0x00000007
+# define UNBOXED_TAG 0x00000009 // Not actually a tag; used to return from LkindOf
 
 # endif

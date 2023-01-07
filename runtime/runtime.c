@@ -4,10 +4,14 @@
 
 # include "runtime.h"
 
-# define __ENABLE_GC__
+// TODO
+// # define __ENABLE_GC__
 # ifndef __ENABLE_GC__
 # define alloc malloc
 # endif
+
+// TODO
+#define DEBUG_PRINT
 
 //# define DEBUG_PRINT 1
 
@@ -50,12 +54,6 @@ void __post_gc_subst () {}
 
 # endif
 /* end */
-
-# define STRING_TAG  0x00000001
-# define ARRAY_TAG   0x00000003
-# define SEXP_TAG    0x00000005
-# define CLOSURE_TAG 0x00000007
-# define UNBOXED_TAG 0x00000009 // Not actually a tag; used to return from LkindOf
 
 # define LEN(x) ((x & 0xFFFFFFF8) >> 3)
 # define TAG(x)  (x & 0x00000007)
@@ -446,7 +444,7 @@ static void printStringBuf (char *fmt, ...) {
 
 int is_valid_heap_pointer (void *p);
 
-static void printValue (void *p) {
+extern void printValue (void *p) {
   data *a = (data*) BOX(NULL);
   int i   = BOX(0);
   if (UNBOXED(p)) printStringBuf ("%d", UNBOX(p));
@@ -881,9 +879,20 @@ extern void* Belem (void *p, int i) {
   a = TO_DATA(p);
   i = UNBOX(i);
 
+#ifdef DEBUG_PRINT
+  indent++; print_indent ();
+  printf("Belem: i = %d\n", i); fflush (stdout);
+#endif
+
   if (TAG(a->tag) == STRING_TAG) {
     return (void*) BOX(a->contents[i]);
   }
+
+#ifdef DEBUG_PRINT
+  print_indent ();
+  printf("Belem: end\n"); fflush (stdout);
+  indent--;
+#endif
 
   return (void*) ((int*) a->contents)[i];
 }
