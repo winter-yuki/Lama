@@ -22,6 +22,6 @@ using Ref = void *;
 /**
  * @brief INTerpreter DeBuG.
  */
-#define INTDBG
+// #define INTDBG
 
 #endif  // __DEFS_INCLUDE__

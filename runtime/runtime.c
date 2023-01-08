@@ -4,14 +4,12 @@
 
 # include "runtime.h"
 
-// TODO
 // # define __ENABLE_GC__
 # ifndef __ENABLE_GC__
 # define alloc malloc
 # endif
 
-// TODO
-# define DEBUG_PRINT
+// # define DEBUG_PRINT
 
 #ifdef DEBUG_PRINT
 int indent = 0;

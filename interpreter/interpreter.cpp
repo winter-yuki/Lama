@@ -325,7 +325,7 @@ void interpret(std::string const & filename) {
                 // Is not main
                 if (!retIps.empty()) {
                     for (size_t iArg = 0; iArg < op.nArgs; ++iArg) {
-                        frames.back().arg(iArg) = stack.pop();
+                        frames.back().arg(op.nArgs - iArg - 1) = stack.pop();
                     }
                 }
                 break;
@@ -375,7 +375,7 @@ void interpret(std::string const & filename) {
                 const auto op = std::get<ins::Array>(instr);
                 const auto arr = LmakeArray(BOX(op.size));
                 for (size_t i = 0; i < op.size; ++i) {
-                    Bsta(stack.popRef(), BOX(i), arr);
+                    Bsta(stack.popRef(), BOX(op.size - i - 1), arr);
                 }
                 stack.push(arr);
                 break;
