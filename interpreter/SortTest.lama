@@ -1,0 +1,39 @@
+fun compare (x, y) {
+  x - y
+}
+
+fun print (xs) {
+  case xs of
+    x : xs -> write (x); print (xs)
+  | {} -> Skip
+  esac
+}
+
+fun bubbleSort (l) {
+  fun inner (l) {
+    case l of
+      x : z@(y : tl) ->
+       if compare (x, y) > 0
+       then [true, y : inner (x : tl) [1]]
+       else case inner (z) of [f, z] -> [f, x : z] esac
+       fi
+    | _ -> [false, l]
+    esac
+  }
+
+  fun rec (l) {
+    case inner (l) of
+      [true , l] -> rec (l)
+    | [false, l] -> l
+    esac
+  }
+
+  rec (l)
+}
+
+fun generate (n) {
+  if n then n : generate (n-1) else {} fi
+}
+
+var xs = generate (100);
+print (bubbleSort (xs))
