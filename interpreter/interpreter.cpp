@@ -253,13 +253,6 @@ void interpret(std::string const & filename) {
                 break;
             }
 
-            case ins::id<ins::String>(): {
-                const auto op = std::get<ins::String>(instr);
-                const auto res = Bstring((void *)op.s);
-                stack.push(res);
-                break;
-            }
-
             case ins::id<ins::Ld>(): {
                 const auto op = std::get<ins::Ld>(instr);
                 stack.push(mem(op.loc));
@@ -373,11 +366,9 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Array>(): {
                 const auto op = std::get<ins::Array>(instr);
-                const auto arr = LmakeArray(BOX(op.size));
-                for (size_t i = 0; i < op.size; ++i) {
-                    Bsta(stack.popRef(), BOX(op.size - i - 1), arr);
-                }
-                stack.push(arr);
+                const auto arr = stack.popRef();
+                const auto res = Barray_patt(arr, BOX(op.size));
+                stack.push(res);
                 break;
             }
 
@@ -428,7 +419,17 @@ void interpret(std::string const & filename) {
 
                     case ins::rt::id<ins::rt::CallWrite>(): {
                         Lwrite(stack.popLiteral());
-                        stack.push(BOX(0));  // TODO
+                        stack.push(BOX(0));
+                        break;
+                    }
+
+                    case ins::rt::id<ins::rt::CallArray>(): {
+                        const auto call = std::get<ins::rt::CallArray>(op);
+                        const auto arr = LmakeArray(BOX(call.size));
+                        for (size_t i = 0; i < call.size; ++i) {
+                            Bsta(stack.popRef(), BOX(call.size - i - 1), arr);
+                        }
+                        stack.push(arr);
                         break;
                     }
 

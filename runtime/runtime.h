@@ -58,6 +58,15 @@ int LkindOf (void *p);
 void* LmakeArray (int length);
 
 /**
+ * @brief Checks array-like structure is array of given size.
+ *
+ * @param d array-like structure
+ * @param n expected number of values
+ * @return boolean if structure is array of given length
+ */
+int Barray_patt (void *d, int n);
+
+/**
  * @brief Accesses value by index in the array-like structure.
  *
  * @param p

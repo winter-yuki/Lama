@@ -222,15 +222,6 @@ ByteCode convert(bytefile const * bf) {
                 break;
             }
 
-            case ins::id<ins::RuntimeCall>(): {
-                const auto & op = std::get<ins::RuntimeCall>(instr);
-                if (std::holds_alternative<rt::CallArray>(op)) {
-                    const auto & call = std::get<rt::CallArray>(op);
-                    instr.emplace<ins::Array>(call.size);
-                }
-                break;
-            }
-
             default:
                 break;
         }
