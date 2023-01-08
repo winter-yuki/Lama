@@ -11,9 +11,7 @@
 # endif
 
 // TODO
-#define DEBUG_PRINT
-
-//# define DEBUG_PRINT 1
+# define DEBUG_PRINT
 
 #ifdef DEBUG_PRINT
 int indent = 0;
@@ -1166,12 +1164,21 @@ extern void* Bsexp1 (int tag, int bn) {
 extern int Btag (void *d, int t, int n) {
   data *r;
 
-  if (UNBOXED(d)) return BOX(0);
-  else {
+  if (UNBOXED(d)) {
+#ifdef DEBUG_PRINT
+    indent++; print_indent ();
+    printf("Btag: unboxed\n"); fflush(stdout);
+    indent--;
+#endif
+    return BOX(0);
+  } else {
     r = TO_DATA(d);
 #ifndef DEBUG_PRINT
     return BOX(TAG(r->tag) == SEXP_TAG && TO_SEXP(d)->tag == UNBOX(t) && LEN(r->tag) == UNBOX(n));
 #else
+    indent++; print_indent ();
+    printf("Btag: tag: %d vs %d; len: %d vs %d\n", GET_SEXP_TAG(TO_SEXP(d)->tag), UNBOX(t), LEN(r->tag), UNBOX(n)); fflush(stdout);
+    indent--;
     return BOX(TAG(r->tag) == SEXP_TAG &&
                GET_SEXP_TAG(TO_SEXP(d)->tag) == UNBOX(t) && LEN(r->tag) == UNBOX(n));
 #endif

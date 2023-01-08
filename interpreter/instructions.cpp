@@ -40,16 +40,20 @@ ByteCode convert(bytefile const * bf) {
 
 #define INT (ip += sizeof(int), *(int *)(ip - sizeof(int)))
 #define SIZE (size_t(INT))
+#define CONST (BOX(INT))
 #define INDEX (size_t(INT))
 #define LABEL (size_t(INT))
+
 #define BYTE *ip++
 #define STRING get_string(bf, INT)
 #define FAIL(line) assert(0 && line)
+
 #define UPDATE_TABLE                                       \
     {                                                      \
         const auto label = Label(ip - bf->code_ptr - 1);   \
         labelTranslationTable.insert({label, res.size()}); \
     }
+
 #define Q(x)              \
     {                     \
         UPDATE_TABLE      \
@@ -78,7 +82,7 @@ ByteCode convert(bytefile const * bf) {
             case 1:
                 switch (l) {
                     case 0:
-                        Q(Const{BOX(INT)})
+                        Q(Const{CONST})
                     case 1:
                         Q(String{STRING})
                     case 2:
@@ -121,7 +125,7 @@ ByteCode convert(bytefile const * bf) {
                         loc.emplace<loc::Arg>(INDEX);
                         break;
                     case 3:
-                        loc.emplace<loc::Const>(INT);
+                        loc.emplace<loc::Const>(CONST);
                         break;
                     default:
                         FAIL(__LINE__);

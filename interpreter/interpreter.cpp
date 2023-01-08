@@ -22,7 +22,7 @@ class OperandsStack final {
    public:
     explicit OperandsStack() {
         // Prevent reallocation
-        stack.reserve(10000);
+        stack.reserve(100000);
     }
 
     void push(Literal value) { stack.push_back(Word(value)); }
@@ -74,7 +74,8 @@ class OperandsStack final {
             if (UNBOXED(x)) {
                 std::cout << UNBOX(x);
             } else {
-                std::cout << "(" << LkindOf((void *)x) << ")";
+                std::cout << "(0)";
+                // std::cout << "(" << LkindOf((void *)x) << ")";
                 // printValue((void *)x);
             }
             std::cout << " ";
@@ -185,7 +186,7 @@ void interpret(std::string const & filename) {
                 const auto y = UNBOX(stack.popLiteral());
                 const auto x = UNBOX(stack.popLiteral());
 #ifdef INTDBG
-                std::cout << "x = " << x << "; y = " << y << std::endl;
+                std::cout << "\tx = " << x << "; y = " << y << std::endl;
 #endif  // INTDBG
                 switch (op.op) {
                     case ins::Operator::PLUS:
@@ -312,6 +313,14 @@ void interpret(std::string const & filename) {
             case ins::id<ins::Begin>(): {
                 const auto op = std::get<ins::Begin>(instr);
                 auto frame = Frame(op.nArgs, op.nLocals);
+#ifdef INTDBG
+                std::cout << "\tips"
+                          << ": ";
+                for (const auto ip : retIps) {
+                    std::cout << ip << " ";
+                }
+                std::cout << std::endl;
+#endif  // INTDBG
                 frames.push_back(std::move(frame));
                 // Is not main
                 if (!retIps.empty()) {
@@ -325,6 +334,14 @@ void interpret(std::string const & filename) {
             case ins::id<ins::End>(): {
                 const auto op = std::get<ins::End>(instr);
                 frames.pop_back();
+#ifdef INTDBG
+                std::cout << "\tips"
+                          << ": ";
+                for (const auto ip : retIps) {
+                    std::cout << ip << " ";
+                }
+                std::cout << std::endl;
+#endif  // INTDBG
                 if (retIps.empty()) {
                     ip = instrs.size();
                 } else {
@@ -336,7 +353,7 @@ void interpret(std::string const & filename) {
 
             case ins::id<ins::Call>(): {
                 const auto op = std::get<ins::Call>(instr);
-                retIps.push_back(ip + 1);
+                retIps.push_back(ip);
                 ip = op.ip;
                 break;
             }
@@ -344,7 +361,12 @@ void interpret(std::string const & filename) {
             case ins::id<ins::Tag>(): {
                 const auto op = std::get<ins::Tag>(instr);
                 const auto hash = LtagHash((char *)op.tag);
-                const auto res = Btag(stack.popRef(), hash, op.nValues);
+                const auto ref = stack.popRef();
+                const auto res = Btag(ref, hash, BOX(op.nValues));
+#ifdef INTDBG
+                std::cout << "\thash = " << UNBOX(hash) << "; ref = " << ref
+                          << "; res = " << UNBOX(res) << std::endl;
+#endif  // INTDBG
                 stack.push(res);
                 break;
             }
@@ -353,7 +375,7 @@ void interpret(std::string const & filename) {
                 const auto op = std::get<ins::Array>(instr);
                 const auto arr = LmakeArray(BOX(op.size));
                 for (size_t i = 0; i < op.size; ++i) {
-                    Bsta(stack.popRef(), i, arr);
+                    Bsta(stack.popRef(), BOX(i), arr);
                 }
                 stack.push(arr);
                 break;
@@ -364,7 +386,7 @@ void interpret(std::string const & filename) {
                 const auto value = stack.popRef();
                 const auto index = stack.pop();
                 const auto arr = stack.popRef();
-                const auto res = Bsta(value, UNBOX(index), arr);
+                const auto res = Bsta(value, index, arr);
                 stack.push(res);
                 break;
             }
@@ -381,9 +403,12 @@ void interpret(std::string const & filename) {
             case ins::id<ins::Sexp>(): {
                 const auto op = std::get<ins::Sexp>(instr);
                 const auto hash = LtagHash((char *)op.tag);
-                const auto sexp = Bsexp1(hash, op.nArgs);
+                const auto sexp = Bsexp1(hash, BOX(op.nArgs + 1));
+#ifdef INTDBG
+                std::cout << "\tnArgs = " << op.nArgs << std::endl;
+#endif  // INTDBG
                 for (size_t i = 0; i < op.nArgs; ++i) {
-                    Bsta(stack.popRef(), op.nArgs - i - 1, sexp);
+                    Bsta(stack.popRef(), BOX(op.nArgs - i - 1), sexp);
                 }
                 stack.push(sexp);
                 break;
@@ -403,6 +428,7 @@ void interpret(std::string const & filename) {
 
                     case ins::rt::id<ins::rt::CallWrite>(): {
                         Lwrite(stack.popLiteral());
+                        stack.push(BOX(0));  // TODO
                         break;
                     }
 
